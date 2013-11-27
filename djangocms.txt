@@ -1,0 +1,190 @@
+#SETTING UP THE ENVIRONMENT
+virtualenv --distribute --no-site-packages .envs/sped
+source .envs/sped/bin/activate
+
+#INSTALLING DEPENDENCIES
+pip install -r ~/Projects/requirements.txt
+
+#CREATING A PROJECT
+cd Projects
+django-admin.py startproject sped
+cd sped
+python manage.py runserver
+#From this point you should have a working django site.
+
+#INTEGRATE THE CMS TO DJANGO
+------------------------------------------------------------------------------------
+#SETTINGS.PY
+------------------------------------------------------------------------------------
+# -*- coding: utf-8 -*-
+import os
+gettext = lambda s: s
+PROJECT_PATH = os.path.split(os.path.abspath(os.path.dirname(__file__)))[0]	
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(PROJECT_PATH, 'database.sqlite'),
+    }
+}
+
+MEDIA_ROOT = os.path.join(PROJECT_PATH, "media")
+MEDIA_URL = "/media/"
+
+STATIC_ROOT = os.path.join(PROJECT_PATH, "static")
+STATIC_URL = "/static/"
+
+STATICFILES_DIRS = (
+    os.path.join(PROJECT_PATH, "sped/site-static"),
+)
+
+MIDDLEWARE_CLASSES = (
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
+    'django.middleware.doc.XViewMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'cms.middleware.page.CurrentPageMiddleware',
+    'cms.middleware.user.CurrentUserMiddleware',
+    'cms.middleware.toolbar.ToolbarMiddleware',
+    'cms.middleware.language.LanguageCookieMiddleware',
+)
+
+TEMPLATE_CONTEXT_PROCESSORS = (
+    'django.contrib.auth.context_processors.auth',
+    'django.core.context_processors.i18n',
+    'django.core.context_processors.request',
+    'django.core.context_processors.media',
+    'django.core.context_processors.static',
+    'cms.context_processors.media',
+    'sekizai.context_processors.sekizai',
+)
+
+
+TEMPLATE_DIRS = (
+    os.path.join(PROJECT_PATH, "sped/templates"),
+)
+
+CMS_TEMPLATES = (
+    ('base.html', 'The Base'),
+    ('index.html', 'Home Page'),
+)
+
+LANGUAGES = [
+    ('en', 'English'),
+]
+
+INSTALLED_APPS = (
+    'cms',
+    'mptt',
+    'menus',
+    'south',
+    'sekizai',
+
+    'cms.plugins.flash',
+    'cms.plugins.googlemap',
+    'cms.plugins.link',
+    'cms.plugins.text',
+
+    'filer',
+    'easy_thumbnails',
+    'cmsplugin_filer_file',
+    'cmsplugin_filer_folder',
+    'cmsplugin_filer_image',
+    'cmsplugin_filer_teaser',
+    'cmsplugin_filer_video',
+    
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.sites',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django.contrib.admin',
+    'django.contrib.admindocs',
+)
+
+-----------------------------------------------------------------------------------
+URLS.PY
+-----------------------------------------------------------------------------------
+from django.conf.urls.defaults import *
+from django.conf.urls.i18n import i18n_patterns
+from django.contrib import admin
+from django.conf import settings
+
+admin.autodiscover()
+
+urlpatterns = i18n_patterns('',
+    url(r'^admin/', include(admin.site.urls)),
+    url(r'^', include('cms.urls')),
+)
+
+if settings.DEBUG:
+    urlpatterns = patterns('',
+    url(r'^media/(?P<path>.*)$', 'django.views.static.serve',
+        {'document_root': settings.MEDIA_ROOT, 'show_indexes': True}),
+    url(r'', include('django.contrib.staticfiles.urls')),
+) + urlpatterns
+
+-----------------------------------------------------------------------------------
+CREATING YOUR TEMPLATES
+-----------------------------------------------------------------------------------
+#NOW CREATE THE 'TEMPLATES' 'STATIC' AND 'MEDIA' DIRECTORY IN SPED/SPED
+mkdir templates static media
+cd templates
+touch base.html index.html mypages.html
+
+#BASE.HTML
+{% load cms_tags sekizai_tags %}
+
+{% addtoblock "css" %}
+    <link rel="stylesheet" href="{{ STATIC_URL }}css/bootstrap.css">
+{% endaddtoblock %}
+
+{% addtoblock "js" %}
+    <script src="https://code.jquery.com/jquery.js"></script>
+  	<script src="{{ STATIC_URL }}js/bootstrap.js"></script>
+{% endaddtoblock %}
+
+<!DOCTYPE html>
+<html lang="en">
+  	<head>
+	    <meta charset="utf-8">
+	    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	    <meta name="description" content="">
+	    <meta name="author" content="">
+
+	    <title>Your Site Title</title>
+
+	    {% render_block "css" %}
+	</head>
+
+	<body>
+      	{% cms_toolbar %}
+	    {% placeholder base_content %}
+      	{% block base_content %}{% endblock %}
+
+    {% render_block "js" %}
+	</body>
+
+</html>
+
+#INDEX.HTML
+{% extends "base.html" %}
+{% load cms_tags sekizai_tags %}
+
+{% block base_content %}
+	{% placeholder index_content %}
+{% endblock %}
+
+#INITIALIZE DATABASE
+python manage.py syncdb --all
+python manage.py migrate --fake
+
+#CHECK IF YOU DID EVERYTHING OKAY
+python manage.py cms check
+python manage.py runserver 
+#YOU SHOULD SEE THE UNICORN

@@ -1,0 +1,76 @@
+#Creating a django app in Heroku
+
+#SETUP THE ENVIRONMENT
+virtualenv --no-site-packages .envs/dot
+source .envs/dot/bin/activate
+
+#INSTALL DEPENDENCIES
+pip install django-toolbelt
+
+#CREATE YOUR PROJECT
+cd Projects && mkdir dotProject
+cd dotProject
+django-admin.py startproject dot .
+python manage.py runserver
+
+#EDIT SETTINGS.PY
+
+# -*- coding: utf-8 -*-
+import os
+gettext = lambda s: s
+PROJECT_PATH = os.path.abspath(os.path.dirname(__file__))
+
+
+# Allow all host headers
+ALLOWED_HOSTS = ['*']
+
+MEDIA_ROOT = os.path.join(PROJECT_PATH, "media")
+MEDIA_URL = "/media/"
+
+STATIC_ROOT = os.path.join(PROJECT_PATH, "static")
+STATIC_URL = "/static/"
+
+STATICFILES_DIRS = (
+    os.path.join(PROJECT_PATH, "staticfiles"),
+)
+
+# Parse database configuration from $DATABASE_URL
+import dj_database_url
+DATABASES['default'] =  dj_database_url.config()
+
+# Honor the 'X-Forwarded-Proto' header for request.is_secure()
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+#EDIT WSGI.PY
+
+from django.core.wsgi import get_wsgi_application
+from dj_static import Cling
+
+application = Cling(get_wsgi_application())
+
+#CREATE requirements.txt
+pip freeze > requirements.txt
+
+#CREATE Procfile
+web: gunicorn dot.wsgi
+
+#TEST YOUR SITE LOCALLY 
+foreman start
+
+#STORE YOUR APP IN GIT
+
+#CREATE .gitignore
+venv
+*.pyc
+staticfiles
+
+git init
+git add .
+git commit -m "first commit"
+
+#DEPLOY TO HEROKU
+heroku login
+heroku create
+git push heroku master
+
+
